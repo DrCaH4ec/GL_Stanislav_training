@@ -1,0 +1,101 @@
+ #!/bin/bash
+
+moves=("r" "p" "s")
+endgame=0
+
+# Usage score $user_move $machine_move
+# where $user_move    - the choice made by the player
+#       $machine_move - the choice made by the machine
+#
+# Possible choices:
+# r - rock
+# p - paper
+# s - scissors
+function score {
+    if [ $1 = $2 ]
+    then
+        echo 0
+    elif [[ $1 = "r" && $2 = "s" ]]
+    then
+        echo 1
+    elif [[ $1 = "s" && $2 = "p" ]]
+    then
+        echo 1
+    elif [[ $1 = "p" && $2 = "r" ]]
+    then
+        echo 1
+    else
+        echo -1
+    fi        
+}
+
+
+# Usage: is_in_list $value "${list[@]}"
+function is_in_list {
+    local value=$1
+    shift
+    local arr=("$@")
+    for x in ${arr[@]}
+    do
+        if [ $x = $value ]
+        then
+            return 0
+        fi
+    done
+    return 1
+}
+
+
+# Usage extend_move_name $char
+# where $char is a short form of a move
+# r - rock
+# p - paper
+# s - scissors
+#
+# function return 1 in case of unknown argument
+function extend_move_name {
+    case $1 in
+        "r")
+            echo "rock"
+            ;;
+        "p")
+            echo "paper"
+            ;;
+        "s")
+            echo "scissors"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+
+echo "Let's play the rock-paper-scissors game!
+Please choose: rock (r) - paper (p) - scissors (s)"
+while [  $endgame -eq 0 ]
+do
+    read user_move
+    if ! is_in_list $user_move "${moves[@]}"
+    then 
+        echo "Invalid value, please try again:"
+        continue
+    fi
+    machine_move=${moves[(RANDOM % 3)]}
+    echo "You have chosen $(extend_move_name $user_move)"
+    echo "Machine have chosen $(extend_move_name $machine_move)"
+    game_score=$(score $user_move $machine_move)
+    if [ $game_score -ne 0 ]
+    then
+        endgame=1
+    else
+        echo "Tie, try another time:"
+    fi
+done
+if [ $game_score -eq 1 ]
+then
+    echo "You win!"
+else
+    echo "Machine win!"
+fi
+# bash zalupa
