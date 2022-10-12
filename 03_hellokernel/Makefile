@@ -1,33 +1,18 @@
 
-# based on https://linux.die.net/lkmpg/hello2.html by Peter Jay Salzman
-# (!) using paths with spaces may not work with Kbuild
+ifneq ($(KERNELRELEASE),)
 
-ARCH:=
-CROSS_COMPILE:=
-CC=$(CROSS_COMPILE)-gcc
+ARCH=arm
+PATH+=/opt/gcc-arm-8.3-2019.03-x86_64-arm-eabi/bin
+CROSS_COMPILE='ccache arm-eabi-'
 
-# this is what is used by Kbuild
-obj-m += hellokernel.o
+# kbuild part of makefile
+obj-m   := hellokernel.o
+else
+# normal makefile
+KDIR ?= /lib/modules/`uname -r`/build
 
-# directory containing Makefile for kernel build
-KBUILDDIR := /lib/modules/$(shell uname -r)/build/
-
-.PHONY: modules clean tidy
-
-# recur to the original kernel Makefile with some additions
-modules:
-	$(MAKE) -C "$(KBUILDDIR)" M="$(PWD)" modules
-
-tidy:
-	$(MAKE) -C "$(KBUILDDIR)" M="$(PWD)" clean
-
-# we link original clean to target named tidy
+default:
+	$(MAKE) -C $(KDIR) M=$$PWD
 clean:
-	-rm -f modules.order Module.symvers
-	-rm -rf .tmp_versions
-	-rm -f $(obj-m) $(obj-m:.o=.mod.o) $(obj-m:.o=.mod.c)
-	-rm -f $(addsuffix .cmd,$(addprefix .,$(obj-m)))
-	-rm -f $(addsuffix .cmd,$(addprefix .,$(obj-m:.o=.ko)))
-	-rm -f $(addsuffix .cmd,$(addprefix .,$(obj-m:.o=.mod.o)))
-
-	
+	$(MAKE) -C $(KDIR) M=$$PWD clean
+endif
