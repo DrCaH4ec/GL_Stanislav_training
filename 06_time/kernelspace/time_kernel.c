@@ -9,6 +9,7 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/ktime.h>
+#include <asm/div64.h>
 #include <linux/ctype.h>
 
 
@@ -21,27 +22,38 @@ MODULE_LICENSE("Dual MIT/GPL");
 static ktime_t last_read;
 
 
-static ssize_t jiffies_show(struct class *class, struct class_attribute *attr, char *buf)
+static ssize_t absolute_show(struct class *class, struct class_attribute *attr, char *buf)
 {
+	ktime_t sec, nsec;
+
+	sec = ktime_get_ns();
+	do_div(sec, 1000000000);
+	nsec = ktime_get_ns() - sec * 1000000000;
 	last_read = ktime_get_ns();
-	return sprintf(buf, "%llu", get_jiffies_64() - INITIAL_JIFFIES);
+	return sprintf(buf, "%llu.%llu\n", sec, nsec);
 }
 
 
-static ssize_t tick_show(struct class *class, struct class_attribute *attr, char *buf)
+static ssize_t relative_show(struct class *class, struct class_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%llu", ktime_get_ns() - last_read);
+	ktime_t sec, nsec;
+	
+	sec = ktime_get_ns() - last_read;
+	do_div(sec, 1000000000);
+	nsec = ktime_get_ns() - sec * 1000000000;
+
+	return sprintf(buf, "%llu.%llu\n", sec, nsec);
 }
 
 
-struct class_attribute class_attr_jiffies = {
-	.attr = { .name = "jiffies", .mode = 0444 },
-	.show = jiffies_show,
+struct class_attribute class_attr_absolute = {
+	.attr = { .name = "absolute", .mode = 0444 },
+	.show = absolute_show,
 };
 
-struct class_attribute class_attr_tick = {
-	.attr = { .name = "tick", .mode = 0444 },
-	.show = tick_show,
+struct class_attribute class_attr_relative = {
+	.attr = { .name = "relative", .mode = 0444 },
+	.show = relative_show,
 };
 
 static struct class *attr_class_time_kernel;
@@ -57,8 +69,8 @@ static int __init init_mod(void)
 		return -ENOMEM;
 	}
 
-	ret_jiffies = class_create_file(attr_class_time_kernel, &class_attr_jiffies);
-	ret_tick = class_create_file(attr_class_time_kernel, &class_attr_tick);
+	ret_jiffies = class_create_file(attr_class_time_kernel, &class_attr_absolute);
+	ret_tick = class_create_file(attr_class_time_kernel, &class_attr_relative);
 	if (ret_jiffies || ret_tick) {
 		pr_err("time_kernel: error creating sysfs classes attributes\n");
 		class_destroy(attr_class_time_kernel);
@@ -73,8 +85,8 @@ static int __init init_mod(void)
 
 static void __exit cleanup_mod(void)
 {
-	class_remove_file(attr_class_time_kernel, &class_attr_jiffies);
-	class_remove_file(attr_class_time_kernel, &class_attr_tick);
+	class_remove_file(attr_class_time_kernel, &class_attr_absolute);
+	class_remove_file(attr_class_time_kernel, &class_attr_relative);
 	class_destroy(attr_class_time_kernel);
 
 	pr_info("time_kernel: Uninstalled the module\n");
