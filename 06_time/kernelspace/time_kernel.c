@@ -37,7 +37,6 @@ static ssize_t absolute_show(struct class *class, struct class_attribute *attr, 
 static ssize_t relative_show(struct class *class, struct class_attribute *attr, char *buf)
 {
 	ktime_t sec, nsec;
-	
 	sec = ktime_get_ns() - last_read;
 	do_div(sec, 1000000000);
 	nsec = ktime_get_ns() - sec * 1000000000;
